@@ -1,7 +1,13 @@
-FROM openjdk:8-jdk
-
-RUN apt-get update && apt-get install -y git curl zip && rm -rf /var/lib/apt/lists/*
-
+FROM nvidia/cuda:7.5
+# install packages
+RUN apt-get update
+RUN apt-get install -y wget curl
+# insatll docker
+RUN curl -sSL https://get.docker.com/ | sh
+# Install nvidia-docker and nvidia-docker-plugin
+RUN wget -P /tmp https://github.com/NVIDIA/nvidia-docker/releases/download/v1.0.0-rc.3/nvidia-docker_1.0.0.rc.3-1_amd64.deb
+RUN dpkg -i /tmp/nvidia-docker*.deb && rm /tmp/nvidia-docker*.deb
+# install jenkins
 ENV JENKINS_HOME /var/jenkins_home
 ENV JENKINS_SLAVE_AGENT_PORT 50000
 
@@ -60,7 +66,23 @@ EXPOSE 50000
 
 ENV COPY_REFERENCE_FILE_LOG $JENKINS_HOME/copy_reference_file.log
 
-USER ${user}
+# -------------------------------------------------------
+# Install Java.
+RUN apt-get install -y software-properties-common
+RUN \
+  echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+  add-apt-repository -y ppa:webupd8team/java && \
+  apt-get update && \
+  apt-get install -y oracle-java8-installer && \
+  rm -rf /var/lib/apt/lists/* && \
+  rm -rf /var/cache/oracle-jdk8-installer
+
+# Define commonly used JAVA_HOME variable
+ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
+
+# -------------------------------------------------------
+# TODO: no idea why changing user causes docker issue
+#USER ${user}
 
 COPY jenkins-support /usr/local/bin/jenkins-support
 COPY jenkins.sh /usr/local/bin/jenkins.sh
